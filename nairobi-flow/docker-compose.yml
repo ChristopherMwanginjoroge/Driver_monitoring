@@ -1,0 +1,87 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+      - ./scripts:/scripts:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  celery:
+    build:
+      context: ./backend
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+      - ./scripts:/scripts:ro
+    depends_on:
+      - backend
+      - redis
+    command: celery -A nairobi_flow worker -l info
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file: .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: npm run dev -- --host 0.0.0.0
+
+  # OSRM serves candidate routes to the traffic intelligence layer.
+  # First run `bash scripts/build_osrm.sh` to prepare services/osrm/data,
+  # then start it with `docker compose --profile routing up osrm`.
+  osrm:
+    image: osrm/osrm-backend:latest
+    profiles: ["routing"]
+    restart: unless-stopped
+    volumes:
+      - ./services/osrm/data:/data
+    ports:
+      - "5000:5000"
+    command: osrm-routed --algorithm mld /data/nairobi.osrm
+
+volumes:
+  postgis_data:
