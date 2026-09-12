@@ -43,11 +43,20 @@ class TrafficObservation(models.Model):
     confidence = models.FloatField(default=1.0)
     payload = models.JSONField(default=dict, blank=True)
 
+    matched_segment_id = models.IntegerField(
+        null=True, blank=True, db_index=True, help_text="OSM way ID from map matching"
+    )
+    match_confidence = models.FloatField(
+        null=True, blank=True, help_text="Map matching confidence (0.0-1.0)"
+    )
+    raw_lat_lon = models.JSONField(default=dict, blank=True, help_text="Original GPS coordinates")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["road", "timestamp"]),
             models.Index(fields=["source", "timestamp"]),
+            models.Index(fields=["matched_segment_id", "timestamp"]),
         ]
         ordering = ["-timestamp"]

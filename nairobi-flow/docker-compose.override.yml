@@ -1,0 +1,10 @@
+# Host ports 5432/6379 are occupied by unrelated local services,
+# so expose the project's postgis and redis on alternate host ports.
+# Containers still talk to each other on 5432/6379 inside the network.
+services:
+  postgis:
+    ports: !override
+      - "5433:5432"
+  redis:
+    ports: !override
+      - "6380:6379"

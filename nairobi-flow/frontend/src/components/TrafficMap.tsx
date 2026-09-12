@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LonLat, RouteCandidate } from "../types";
@@ -30,19 +30,22 @@ export default function TrafficMap({
   const originMarker = useRef<maplibregl.Marker | null>(null);
   const destMarker = useRef<maplibregl.Marker | null>(null);
   const clickHandlerRef = useRef(onMapClick);
+  const [error, setError] = useState<string | null>(null);
 
   clickHandlerRef.current = onMapClick;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: STYLE_URL,
-      center: NAIROBI_CENTER,
-      zoom: 11,
-      attributionControl: { compact: true },
-    });
-    mapRef.current = map;
+    try {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: STYLE_URL,
+        center: NAIROBI_CENTER,
+        zoom: 11,
+        attributionControl: { compact: true },
+        failIfMajorPerformanceCaveat: false,
+      });
+      mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
     map.on("click", (e) => {
@@ -90,7 +93,12 @@ export default function TrafficMap({
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to initialize map";
+    setError(message);
+    console.error("Map initialization error:", err);
+  }
+  }, [setError]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -138,6 +146,17 @@ export default function TrafficMap({
     if (map.isStyleLoaded()) applyRoutes();
     else map.once("load", applyRoutes);
   }, [candidates, selectedRank]);
+
+  if (error) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <p className="text-gray-700 font-semibold mb-2">Map unavailable</p>
+          <p className="text-gray-500 text-sm max-w-xs">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return <div ref={containerRef} className="absolute inset-0" />;
 }

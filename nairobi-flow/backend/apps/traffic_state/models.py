@@ -44,3 +44,28 @@ class TrafficState(models.Model):
             models.Index(fields=["road", "window_start"]),
         ]
         unique_together = ("road", "window_start")
+
+
+class TrafficSegmentState(models.Model):
+    """Segment-level traffic state derived from map-matched observations.
+
+    Aggregates observations grouped by OSM way ID (matched_segment_id)
+    rather than RoadSegment FK. Enables tracking of traffic flow on
+    unmapped or partially mapped segments.
+    """
+
+    segment_id = models.IntegerField(db_index=True, help_text="OSM way ID")
+    timestamp = models.DateTimeField(db_index=True)
+
+    avg_speed_kmh = models.FloatField(null=True, blank=True)
+    vehicle_count = models.PositiveIntegerField(null=True, blank=True)
+    confidence = models.FloatField(
+        default=0.0, help_text="Mean confidence of matched observations"
+    )
+    observation_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["segment_id", "timestamp"]),
+        ]
+        unique_together = ("segment_id", "timestamp")
