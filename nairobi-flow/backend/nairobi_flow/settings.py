@@ -115,6 +115,7 @@ CELERY_TIMEZONE = "Africa/Nairobi"
 
 # Project-level integrations
 OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "http://osrm:5000")
+OSRM_FALLBACK_URL = os.getenv("OSRM_FALLBACK_URL", "http://router.project-osrm.org")
 
 # Standard
 LANGUAGE_CODE = "en-us"

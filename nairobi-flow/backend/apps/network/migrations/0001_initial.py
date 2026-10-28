@@ -46,7 +46,6 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255, unique=True)),
                 ('description', models.TextField(blank=True)),
-                ('segments', models.ManyToManyField(related_name='corridors', through='network.CorridorSegment', to='network.RoadSegment')),
             ],
         ),
         migrations.CreateModel(
@@ -61,6 +60,11 @@ class Migration(migrations.Migration):
                 'ordering': ['order'],
                 'unique_together': {('corridor', 'order')},
             },
+        ),
+        migrations.AddField(
+            model_name='corridor',
+            name='segments',
+            field=models.ManyToManyField(related_name='corridors', through='network.CorridorSegment', to='network.RoadSegment'),
         ),
         migrations.AddIndex(
             model_name='roadsegment',

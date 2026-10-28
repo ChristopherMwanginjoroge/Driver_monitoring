@@ -4,9 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { LonLat, RouteCandidate } from "../types";
 
 const NAIROBI_CENTER: LonLat = [36.8172, -1.2864];
-const STYLE_URL =
-  import.meta.env.VITE_MAP_STYLE_URL ??
-  "https://demotiles.maplibre.org/style.json";
+const STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL ?? "/style.json";
 
 const ROUTE_COLORS = ["#38bdf8", "#a78bfa", "#f472b6", "#fbbf24"];
 

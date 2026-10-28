@@ -13,6 +13,7 @@ import httpx
 from django.contrib.gis.db.models.functions import AsGeoJSON
 from django.contrib.gis.geos import LineString, Point
 from django.utils.dateparse import parse_datetime
+from django_prometheus.exports import ExportToDjangoView
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -251,9 +252,7 @@ def run_simulation(request: Request) -> Response:
     return Response({"detail": "not implemented"}, status=status.HTTP_202_ACCEPTED)
 
 
-@api_view(["GET"])
-def metrics(request: Request) -> Response:
-    return Response({"detail": "not implemented"})
+metrics = ExportToDjangoView
 
 
 def _coerce_lonlat(value) -> tuple[float, float]:
