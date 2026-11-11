@@ -31,14 +31,29 @@ traffic-intelligence layer. This directory holds prebuild inputs for the
 3. Uncomment the `osrm` service in `docker-compose.yml` and adjust the
    `.osrm` filename to match your build (e.g. `nairobi.osrm`).
 
+   Alternatively, start it with:
+
+   ```sh
+   docker compose --profile routing up osrm
+   ```
+
 ## Why MLD
 
 MLD supports quick weight updates, which the predictive-routing layer
 needs when segment travel times are re-scored from ML predictions.
 CH is faster to query but expensive to rebuild.
 
+## OSRM failover
+
+The backend `OSRMClient` tries the local OSRM service first, then falls
+back to the public OSRM API (`http://router.project-osrm.org`) when the
+local service is unreachable. This means route recommendations work even
+without a built OSRM graph. The fallback URL is configurable via
+`OSRM_FALLBACK_URL` in `.env`.
+
 ## Notes
 
 - OSRM is a candidate-route generator only. Traffic intelligence
   (prediction, network effects) lives in Django, not in OSRM.
-- Do not rely on public OSRM demo servers; run locally.
+- Do not rely on public OSRM demo servers as a mandatory dependency —
+  they are used only as a fallback when the local OSRM container is down.

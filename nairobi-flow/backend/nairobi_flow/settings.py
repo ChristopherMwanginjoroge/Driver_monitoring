@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.prediction",
     "apps.routing",
     "apps.simulation",
+    "apps.journeys",
     "apps.api",
 ]
 

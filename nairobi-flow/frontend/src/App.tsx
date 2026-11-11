@@ -3,8 +3,14 @@ import TrafficMap from "./components/TrafficMap";
 import TopBar from "./components/TopBar";
 import BottomSheet, { type BottomSheetTab } from "./components/BottomSheet";
 import MapControls from "./components/MapControls";
+import NavigationView from "./components/NavigationView";
 import { fetchHealth, recommendRoute } from "./api/client";
-import type { LonLat, RouteCandidate, RouteRecommendation, Strategy } from "./types";
+import type {
+  LonLat,
+  RouteCandidate,
+  RouteRecommendation,
+  Strategy,
+} from "./types";
 
 function defaultDepartureLocal(): string {
   const now = new Date();
@@ -38,18 +44,26 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<BottomSheetTab>("input");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<RouteCandidate | null>(null);
+  const [locationStatus, setLocationStatus] = useState<"detecting" | "found" | "failed">("detecting");
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
 
   const locateMe = useCallback(() => {
     if (!navigator.geolocation) {
+      setLocationStatus("failed");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const ll: LonLat = [pos.coords.longitude, pos.coords.latitude];
         setOrigin(ll);
+        setLocationAccuracy(pos.coords.accuracy ?? null);
+        setLocationStatus("found");
       },
       (err) => {
         console.warn("Geolocation error:", err);
+        setLocationStatus("failed");
       },
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 5000 },
     );
@@ -169,12 +183,40 @@ export default function App() {
   );
 
   const startDrive = useCallback(() => {
-    alert("Starting navigation in Nairobi Flow — drive safely!");
-  }, []);
+    if (!selectedRank || !candidates[selectedRank]) return;
+    const route = candidates[selectedRank];
+    setSelectedRoute(route);
+    setIsNavigating(true);
+  }, [candidates, selectedRank]);
 
   const reportIssue = useCallback(() => {
     alert("Report a road issue — feature coming soon.");
   }, []);
+
+  const onNavigationComplete = useCallback(() => {
+    setIsNavigating(false);
+    setSelectedRoute(null);
+    setTab("input");
+    setCandidates([]);
+    setSelectedRank(null);
+  }, []);
+
+  if (isNavigating && selectedRoute && origin && destination) {
+    return (
+      <div className="relative h-full w-full">
+        <NavigationView
+          origin={origin}
+          destination={destination}
+          route={{
+            geometry: selectedRoute.geometry,
+            distance_m: selectedRoute.distance_m,
+            duration_s: selectedRoute.current_travel_time_s,
+          }}
+          onComplete={onNavigationComplete}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full w-full">
@@ -185,6 +227,7 @@ export default function App() {
           candidates={candidates}
           selectedRank={selectedRank}
           onMapClick={handleMapClick}
+          accuracyMeters={locationAccuracy}
         />
       </main>
 
@@ -203,10 +246,11 @@ export default function App() {
         onDestinationChange={onDestinationChange}
         onOriginBlur={onOriginBlur}
         onDestinationBlur={onDestinationBlur}
-        onOriginKeyDown={handleOriginKeyDown}
-        onDestinationKeyDown={handleDestinationKeyDown}
-        onSwap={swap}
-        departureTime={departureTime}
+          onOriginKeyDown={handleOriginKeyDown}
+          onDestinationKeyDown={handleDestinationKeyDown}
+          onSwap={swap}
+          onReDetectLocation={locateMe}
+          departureTime={departureTime}
         onDepartureChange={setDepartureTime}
         strategy={strategy}
         onStrategyChange={setStrategy}
@@ -228,7 +272,29 @@ export default function App() {
 
       <footer className="absolute bottom-2 left-0 right-0 text-center text-xs text-slate-500">
         <span className="bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded">
-          NAIROBI FLOW · backend: <span className={healthClass}>{health}</span>
+          NAIROBI FLOW · backend:{" "}
+          <span className={healthClass}>{health}</span>{" "}
+          · location:
+          <span
+            className={`font-semibold ${
+              locationStatus === "found"
+                ? "text-emerald-600"
+                : locationStatus === "failed"
+                  ? "text-rose-600"
+                  : "text-slate-400"
+            }`}
+          >
+            {locationStatus === "found"
+              ? "detected"
+              : locationStatus === "failed"
+                ? "not available"
+                : "detecting…"}
+          </span>
+          {locationAccuracy != null && (
+            <span className="ml-1 text-[10px] text-slate-500">
+              (±{Math.round(locationAccuracy)} m)
+            </span>
+          )}
         </span>
       </footer>
     </div>

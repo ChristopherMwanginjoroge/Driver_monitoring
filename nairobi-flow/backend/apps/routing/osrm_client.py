@@ -17,11 +17,22 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class OSRMStep:
+    instruction: str
+    distance_m: float
+    duration_s: float
+    type: str
+    modifier: str | None
+    location: tuple[float, float] | None
+
+
+@dataclass
 class OSRMRoute:
     geometry: dict[str, Any]
     duration_s: float
     distance_m: float
     legs: list[dict[str, Any]]
+    steps: list[OSRMStep]
 
 
 class OSRMClient:
@@ -43,7 +54,7 @@ class OSRMClient:
             "alternatives": str(alternatives),
             "geometries": "geojson",
             "overview": "full",
-            "steps": "false",
+            "steps": "true",
             "annotations": "duration,distance,nodes",
         }
 
@@ -65,6 +76,7 @@ class OSRMClient:
                         duration_s=float(r["duration"]),
                         distance_m=float(r["distance"]),
                         legs=r.get("legs", []),
+                        steps=_parse_steps(r.get("legs", [])),
                     )
                     for r in data.get("routes", [])
                 ]
@@ -78,3 +90,27 @@ class OSRMClient:
                 else:
                     logger.error("All OSRM endpoints failed: %s", exc)
                     raise
+
+
+def _parse_steps(legs: list[dict[str, Any]]) -> list[OSRMStep]:
+    """Extract turn-by-turn maneuver steps from OSRM legs."""
+    steps: list[OSRMStep] = []
+    for leg in legs:
+        for step in leg.get("steps", []) or []:
+            maneuver = step.get("maneuver", {}) or {}
+            steps.append(
+                OSRMStep(
+                    instruction=maneuver.get("instruction", "Continue"),
+                    distance_m=float(step.get("distance", 0.0)),
+                    duration_s=float(step.get("duration", 0.0)),
+                    type=maneuver.get("type", ""),
+                    modifier=maneuver.get("modifier"),
+                    location=(
+                        float(maneuver["location"][0]),
+                        float(maneuver["location"][1]),
+                    )
+                    if maneuver.get("location")
+                    else None,
+                )
+            )
+    return steps

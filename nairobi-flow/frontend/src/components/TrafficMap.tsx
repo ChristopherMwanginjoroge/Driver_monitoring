@@ -14,6 +14,7 @@ export interface TrafficMapProps {
   candidates: RouteCandidate[];
   selectedRank: number | null;
   onMapClick: (lonlat: LonLat) => void;
+  accuracyMeters?: number | null;
 }
 
 export default function TrafficMap({
@@ -22,6 +23,7 @@ export default function TrafficMap({
   candidates,
   selectedRank,
   onMapClick,
+  accuracyMeters,
 }: TrafficMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -100,16 +102,103 @@ export default function TrafficMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !origin) return;
     originMarker.current?.remove();
     originMarker.current = null;
-    if (origin) {
-      originMarker.current = new maplibregl.Marker({ color: "#22c55e" })
-        .setLngLat(origin)
-        .setPopup(new maplibregl.Popup().setText("Origin"))
-        .addTo(map);
+    const el = document.createElement("div");
+    el.style.width = "28px";
+    el.style.height = "28px";
+    el.style.borderRadius = "50%";
+    el.style.backgroundColor = "#22c55e";
+    el.style.border = "3px solid white";
+    el.style.boxShadow = "0 0 0 6px rgba(34, 197, 94, 0.35)";
+    el.className = "location-pin";
+    originMarker.current = new maplibregl.Marker({ element: el })
+      .setLngLat(origin)
+      .setPopup(new maplibregl.Popup().setText("Your location"))
+      .addTo(map);
+    if (!destination) {
+      map.flyTo({ center: origin, zoom: 14, duration: 1000 });
     }
-  }, [origin]);
+
+    // Draw accuracy circle
+    if (accuracyMeters && accuracyMeters > 0) {
+      if (map.getSource("accuracy-circle")) {
+        (map.getSource("accuracy-circle") as maplibregl.GeoJSONSource).setData({
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: origin,
+          },
+          properties: { buffer: accuracyMeters },
+        });
+      } else {
+        map.addSource("accuracy-circle", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: origin,
+            },
+            properties: { buffer: accuracyMeters },
+          },
+        });
+        map.addLayer({
+          id: "accuracy-circle-fill",
+          type: "fill",
+          source: "accuracy-circle",
+          paint: {
+            "fill-color": "#22c55e",
+            "fill-opacity": 0.15,
+          },
+        });
+        map.addLayer({
+          id: "accuracy-circle-stroke",
+          type: "line",
+          source: "accuracy-circle",
+          paint: {
+            "line-color": "#22c55e",
+            "line-width": 2,
+            "line-opacity": 0.6,
+          },
+        });
+        map.setPaintProperty(
+          "accuracy-circle-fill",
+          "fill-opacity",
+          [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            0.05,
+            22,
+            0.2,
+          ],
+        );
+      }
+    } else {
+      if (map.getLayer("accuracy-circle-fill")) {
+        map.removeLayer("accuracy-circle-fill");
+      }
+      if (map.getLayer("accuracy-circle-stroke")) {
+        map.removeLayer("accuracy-circle-stroke");
+      }
+      if (map.getSource("accuracy-circle")) {
+        map.removeSource("accuracy-circle");
+      }
+    }
+  }, [origin, destination, accuracyMeters]);
+
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.35); }
+      70% { transform: scale(1.3); box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.35); }
+    }
+  `;
+  document.head.appendChild(styleEl);
 
   useEffect(() => {
     const map = mapRef.current;

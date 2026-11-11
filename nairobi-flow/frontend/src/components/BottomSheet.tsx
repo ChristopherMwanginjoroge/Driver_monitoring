@@ -15,6 +15,7 @@ export interface BottomSheetProps {
   onOriginKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onDestinationKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onSwap: () => void;
+  onReDetectLocation: () => void;
   departureTime: string;
   onDepartureChange: (v: string) => void;
   strategy: Strategy;
@@ -42,6 +43,7 @@ export default function BottomSheet({
   onOriginKeyDown,
   onDestinationKeyDown,
   onSwap,
+  onReDetectLocation,
   departureTime,
   onDepartureChange,
   strategy,
@@ -92,15 +94,25 @@ export default function BottomSheet({
                   <MapPinIcon className="w-4 h-4 text-emerald-500" />
                   Origin
                 </label>
-                <input
-                  type="text"
-                  placeholder="Tap map or enter lon, lat"
-                  className="w-full h-12 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:bg-white"
-                  value={origin ? `${origin[0].toFixed(4)}, ${origin[1].toFixed(4)}` : ""}
-                  onChange={(e) => onOriginChange(e.target.value)}
-                  onBlur={onOriginBlur}
-                  onKeyDown={onOriginKeyDown}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Tap map or enter lon, lat"
+                    className="flex-1 h-12 rounded-xl bg-slate-50 border border-slate-200 px-3 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:bg-white"
+                    value={origin ? `${origin[0].toFixed(4)}, ${origin[1].toFixed(4)}` : ""}
+                    onChange={(e) => onOriginChange(e.target.value)}
+                    onBlur={onOriginBlur}
+                    onKeyDown={onOriginKeyDown}
+                  />
+                  <button
+                    type="button"
+                    onClick={onReDetectLocation}
+                    className="h-12 rounded-xl bg-white border border-slate-200 px-3 flex items-center justify-center text-sm text-sky-600 font-medium hover:bg-sky-50 active:scale-95 transition"
+                    aria-label="Re-detect my location"
+                  >
+                    📍
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-center -my-1">

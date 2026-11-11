@@ -89,8 +89,14 @@ SELECT mean_exec_time, query FROM pg_stat_statements ORDER BY mean_exec_time DES
    - Map match success rate < 90%
    - API p95 latency > 500ms
    - Database connections > 80% of max_connections
-
 4. **Loki Log Queries**: Filter logs by service and environment:
    ```
    {service="backend", environment="production"}
    ```
+
+## Prometheus Configuration
+
+The Django backend exposes metrics at `/api/metrics/` (via `django-prometheus`).
+Prometheus is configured to scrape this endpoint in `monitoring/prometheus.yml`.
+The path was changed from `/metrics` to `/api/metrics/` to align with DRF
+routing conventions.

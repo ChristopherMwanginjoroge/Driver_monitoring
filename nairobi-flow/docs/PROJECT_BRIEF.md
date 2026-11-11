@@ -93,14 +93,14 @@ Westlands, Eastlands, CBD, and beyond.
 - **Map data**: OpenStreetMap
 - **Geospatial**: OSMnx, GeoPandas, Shapely, GDAL
 - **Database**: PostgreSQL + PostGIS
-- **Routing**: OSRM
+- **Routing**: OSRM (with public-API fallback)
 - **Simulation**: SUMO
 - **Backend**: Python, Django, Django REST Framework
 - **Background**: Celery, Redis
 - **Data science**: NumPy, Pandas, scikit-learn
 - **Deep learning**: PyTorch (only when justified)
 - **Computer vision**: OpenCV, YOLO or similar open detector
-- **Frontend**: React, TypeScript, Vite, Tailwind
+- **Frontend**: React, TypeScript, Vite, Tailwind (mobile-first)
 - **Map rendering**: MapLibre GL JS
 - **Containers**: Docker, Docker Compose
 - **VCS**: Git, GitHub
@@ -124,7 +124,7 @@ Traffic State Engine ←→ Historical Dataset
         ↓
   REACT + MAPLIBRE
         ↓
- TRAFFIC DASHBOARD
+ TRAFFIC DASHBOARD (mobile-first)
 ```
 
 ## 9. Data sources
@@ -164,9 +164,7 @@ lanes, speed_limit, free_flow_speed, capacity, and intersection relations.
 
 Per segment estimate speed (avg/median), vehicle count, density,
 travel_time, queue_length, occupancy, congestion level, confidence.
-
-State classes: `FREE_FLOW`, `LIGHT`, `MODERATE`, `HEAVY`, `SEVERE`.
-Do not choose thresholds arbitrarily. Prefer:
+State classes: `FREE_FLOW`, `LIGHT`, `MODERATE`, `HEAVY`, `SEVERE`. Congestion ratio:
 
 ```
 congestion_ratio = current_speed / free_flow_speed
@@ -230,6 +228,13 @@ Use OSRM as candidate route generator. Keep the traffic intelligence
 layer separate from OSRM. Commercial systems are for benchmarking only
 via legal channels — no scraping, no paid dependencies at runtime.
 
+### OSRM failover
+
+The backend `OSRMClient` tries the local OSRM container first, then falls
+back to the public OSRM API (`router.project-osrm.org`) when local OSRM is
+unavailable. This means route recommendations work even without a built
+OSRM graph. The fallback URL is configurable via `OSRM_FALLBACK_URL`.
+
 ## 26–29. CV, GPS, map matching, real-time pipeline
 
 CV pipeline: camera → OpenCV → detection → tracking → counting →
@@ -272,12 +277,31 @@ GET  /api/metrics/
 GET  /api/models/
 ```
 
+The `/api/metrics/` endpoint is served by `django-prometheus` for
+Prometheus scraping.
+
 ## 32–35. Frontend
 
-React + TypeScript + MapLibre. Sections: Live Traffic, Prediction,
-Route Recommendation, Simulation, Network Metrics, Historical Analysis.
+React + TypeScript + MapLibre. The frontend is a **mobile-first**
+application with:
+
+- **Full-screen map** as the background (MapLibre GL JS)
+- **Floating top bar**: hamburger menu, "Where to?" search bar, profile icon
+- **Collapsible bottom sheet**: origin/destination inputs with pin icons,
+  swap button, departure time, strategy dropdown, "Recommend Routes" CTA
+- **Route selection state**: tappable route cards showing time/distance/risk,
+  "Start Drive" button
+- **Floating map controls**: current-location button (blue arrow) and
+  report button (yellow triangle)
+- **Any origin, any destination**: tap the map or type coordinates. The old
+  Rongai → CBD preset has been removed.
+
+Sections: Live Traffic, Prediction, Route Recommendation, Simulation,
+Network Metrics, Historical Analysis.
+
 Route recommendation UI shows current time, predicted time, and risk
 per alternative, plus a clear recommendation.
+
 Simulation UI allows configuring origin, destination, vehicle count,
 time period, scenario, and routing strategy, and compares strategies.
 

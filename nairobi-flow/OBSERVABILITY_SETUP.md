@@ -1,6 +1,6 @@
-# Observability Stack Setup - Complete
+# Observability Stack Setup
 
-## ✅ Completed Tasks
+## Completed Tasks
 
 ### Task 1: Docker Compose Updated ✓
 **File**: `docker-compose.yml`
@@ -20,7 +20,7 @@ Added 3 new volumes:
 **File**: `monitoring/prometheus.yml`
 
 Configured scrape jobs:
-- Django application metrics from backend:8000/metrics
+- Django application metrics from backend:8000/api/metrics/
 - PostgreSQL metrics from postgres_exporter:9187
 - Prometheus self-monitoring on localhost:9090
 
@@ -29,9 +29,9 @@ Configured scrape jobs:
 
 Configured:
 - 7-day retention period
-- BoltDB shipper for indexing
 - Filesystem storage backend
 - Active on port 3100
+- Image pinned to `grafana/loki:2.9.10`
 
 ### Task 4: Django Prometheus Integration ✓
 **File**: `backend/nairobi_flow/settings.py`
@@ -44,8 +44,8 @@ Changes:
 **File**: `backend/nairobi_flow/urls.py`
 
 Changes:
-1. Imported `serve_metrics` from django_prometheus.views
-2. Added `/metrics` endpoint for Prometheus scraping
+1. Imported `ExportToDjangoView` from django_prometheus.exports
+2. Set `metrics = ExportToDjangoView` at `/api/metrics/`
 
 ### Task 5: Python Logging Loki Integration ✓
 **File**: `backend/requirements.txt`
@@ -154,28 +154,28 @@ curl http://localhost:3100/ready       # Loki
     v                                     v    v
 ┌─────────┐                          ┌─────────────┐
 │ Django  │ ─────────────────────>  │ Prometheus  │
-│ App     │ /metrics                │ :9090       │
+│ App     │ /api/metrics/           │ :9090       │
 └─────────┘                          └────┬────────┘
-                                         │
+                                          │
     ┌───────────────┬───────────────┐    │
     v               v               v    v
 ┌─────────┐   ┌─────────┐   ┌──────────────┐
 │Postgres │   │ Redis   │   │ postgres_exp │
 │ :5432   │   │ :6379   │   │ :9187        │
 └─────────┘   └─────────┘   └──────────────┘
-                                    │
-                                    │
-                                    v
-                            ┌──────────────┐
-                            │   Loki       │
-                            │   :3100      │
-                            └──────────────┘
-                                    ^
-                                    │
-                            ┌──────────────┐
-                            │  Grafana     │
-                            │  :3000       │
-                            └──────────────┘
+                                        │
+                                        │
+                                        v
+                                ┌──────────────┐
+                                │   Loki       │
+                                │   :3100      │
+                                └──────────────┘
+                                        ^
+                                        │
+                                ┌──────────────┐
+                                │  Grafana     │
+                                │  :3000       │
+                                └──────────────┘
 ```
 
 ---
